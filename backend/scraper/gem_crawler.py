@@ -4,11 +4,9 @@ from datetime import datetime
 
 def run_crawler():
     print("🕷️ TenderPilot Gem Crawler initialized...")
-    # Target directory for downloaded tenders
     os.makedirs("./data", exist_ok=True)
     os.makedirs("./outputs", exist_ok=True)
     
-    # Placeholder log indicating execution
     log_data = {
         "timestamp": str(datetime.now()),
         "status": "success",
