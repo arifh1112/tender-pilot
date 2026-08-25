@@ -1,52 +1,51 @@
-from fastapi import APIRouter, HTTPException
-import requests
 import os
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-router = APIRouter()
 
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_API_TOKEN")
-PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+WHATSAPP_API_TOKEN = os.getenv("WHATSAPP_API_TOKEN")
+WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 
-@router.post("/webhook/whatsapp/alert")
-async def send_whatsapp_alert(phone_number: str, bid_id: str, summary_text: str):
+def send_whatsapp_alert(recipient_phone: str, message_text: str):
     """
-    Sends automated WhatsApp alerts to contractors with 1-page qualification summaries.
+    Sends an outbound text alert via the Meta WhatsApp Cloud API.
     """
-    if not WHATSAPP_TOKEN or not PHONE_NUMBER_ID:
-        raise HTTPException(
-            status_code=500, 
-            detail="WhatsApp API credentials not configured in environment variables."
-        )
-        
-    url = f"https://graph.facebook.com/v17.0/{PHONE_NUMBER_ID}/messages"
+    if not WHATSAPP_API_TOKEN or not WHATSAPP_PHONE_NUMBER_ID or WHATSAPP_API_TOKEN == "mock_token_for_now":
+        print("⚠️ WhatsApp credentials not fully configured. Skipping actual network request.")
+        print(f"Mock Notification to {recipient_phone}:\n{message_text}")
+        return {"status": "skipped", "reason": "mock_credentials"}
+
+    url = f"https://graph.facebook.com/v18.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    
     headers = {
-        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
-        "Content-Type": "application/json"
+        "Authorization": f"Bearer {WHATSAPP_API_TOKEN}",
+        "Content-Type": "application/json",
     }
     
     payload = {
         "messaging_product": "whatsapp",
-        "to": phone_number,
-        "type": "template",
-        "template": {
-            "name": "tender_alert_summary",
-            "language": {"code": "en"},
-            "components": [
-                {
-                    "type": "body",
-                    "parameters": [
-                        {"type": "text", "text": bid_id},
-                        {"type": "text", "text": summary_text[:1000]}
-                    ]
-                }
-            ]
+        "to": recipient_phone,
+        "type": "text",
+        "text": {
+            "body": message_text
         }
     }
-    
-    response = requests.post(url, json=payload, headers=headers)
-    if response.status_code != 200:
-        raise HTTPException(status_code=400, detail=response.text)
-    
-    return {"status": "success", "message": "WhatsApp alert sent successfully"}
+
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        response_data = response.json()
+        if response.status_code == 200:
+            print(f"✅ WhatsApp alert successfully sent to {recipient_phone}")
+            return response_data
+        else:
+            print(f"❌ Failed to send WhatsApp alert: {response_data}")
+            return response_data
+    except Exception as e:
+        print(f"❌ Network error while connecting to WhatsApp API: {e}")
+        return {"status": "error", "message": str(e)}
+
+if __name__ == "__main__":
+    # Local dry-run test
+    test_msg = "🚨 TenderPilot Alert: New tender detected (GEM/2026/B/9812450). Compliance document ready for review."
+    send_whatsapp_alert("919876543210", test_msg)
