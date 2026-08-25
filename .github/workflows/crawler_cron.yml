@@ -2,8 +2,8 @@ name: TenderPilot Daily Crawler
 
 on:
   schedule:
-    - cron: '0 2 * * *' # Runs daily at 2:00 AM UTC (7:30 AM IST)
-  workflow_dispatch:      # Allows manual trigger from GitHub UI
+    - cron: '0 2 * * *'
+  workflow_dispatch:
 
 jobs:
   run-crawler:
@@ -31,4 +31,5 @@ jobs:
           WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
           WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
         run: |
-          python3 backend/scraper/gem_crawler.py
+          # Use absolute workspace path to prevent nesting lookup issues
+          python3 ${{ github.workspace }}/backend/scraper/gem_crawler.py
